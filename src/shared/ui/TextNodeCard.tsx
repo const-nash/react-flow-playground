@@ -1,32 +1,36 @@
-import type { z } from 'zod';
 import type { NodeComponentProps } from '../../core';
 import { fieldClass } from './field';
-import { NodeCard, SaveCancel, type Accent } from './NodeCard';
-import { useDraft } from './useDraft';
+import { FieldError, NodeCard, type Accent } from './NodeCard';
 
 type TextData = { text: string };
 
 interface Props extends NodeComponentProps<TextData> {
-  schema: z.ZodType<TextData>;
   title: string;
   placeholder: string;
   accent: Accent;
+  maxLength: number;
   monospace?: boolean;
 }
 
-/** Node card with a single text field and Save / Cancel. */
-export function TextNodeCard({ data, onSave, schema, title, placeholder, monospace, ...card }: Props) {
-  const { draft, setDraft, dirty, reset, error, value } = useDraft(data, schema, (a, b) => a.text === b.text);
+/** Node card with a single text field; every keystroke goes straight to the store. */
+export function TextNodeCard({ data, errors, onChange, title, placeholder, maxLength, monospace, ...card }: Props) {
+  const error = errors.text;
 
   return (
-    <NodeCard title={title} {...card}>
+    <NodeCard title={title} invalid={Boolean(error)} {...card}>
       <textarea
-        className={`${fieldClass} nowheel flex-1 resize-none ${monospace ? 'font-mono' : ''} ${dirty && error ? '!border-red-400' : ''}`}
+        className={`${fieldClass} nowheel flex-1 resize-none ${monospace ? 'font-mono' : ''} ${error ? '!border-red-400' : ''}`}
         placeholder={placeholder}
-        value={draft.text}
-        onChange={(e) => setDraft({ text: e.target.value })}
+        value={data.text}
+        onChange={(e) => onChange({ text: e.target.value })}
+        aria-invalid={Boolean(error)}
       />
-      <SaveCancel dirty={dirty} error={error} onSave={() => value && onSave(value)} onCancel={reset} />
+      <div className="flex items-center justify-between gap-2">
+        <FieldError message={error} />
+        <span className={`ml-auto shrink-0 text-xs ${error ? 'text-red-600' : 'text-slate-400'}`}>
+          {data.text.length}/{maxLength}
+        </span>
+      </div>
     </NodeCard>
   );
 }

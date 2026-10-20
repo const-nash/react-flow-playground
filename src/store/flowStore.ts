@@ -38,7 +38,7 @@ export interface FlowState {
   saveCurrent: () => Promise<void>;
 
   addChild: (parentId: string, slotId: string, type: string) => void;
-  /** Rejects data that does not match the node type's schema. */
+  /** Stores edits as-is; whether they are valid is decided when the flow is saved. */
   updateData: (id: string, data: unknown) => void;
   requestDelete: (id: string) => void;
   confirmDelete: () => void;
@@ -109,16 +109,7 @@ export function createFlowStore(repository: Repository<Flow>) {
 
       addChild: (parentId, slotId, type) => setNodes((nodes) => addChild(registry, nodes, parentId, slotId, type)),
 
-      updateData: (id, data) => {
-        const node = current().nodes.find((n) => n.id === id);
-        if (!node) return;
-        const result = registry.get(node.type).schema.safeParse(data);
-        if (!result.success) {
-          console.error(`Rejected invalid data for "${node.type}" node ${id}\n${z.prettifyError(result.error)}`);
-          return;
-        }
-        setNodes((nodes) => updateData(nodes, id, result.data));
-      },
+      updateData: (id, data) => setNodes((nodes) => updateData(nodes, id, data)),
 
       requestDelete: (id) => {
         const plan = planRemoval(registry, current().nodes, id);
@@ -142,11 +133,12 @@ export const useFlowStore = createFlowStore(flowRepository);
 export const selectCurrentFlow = (s: FlowState) => s.flows[s.currentId];
 
 // In development, assert after every change that the current tree still satisfies all structural rules.
+// Node data is skipped: it may legitimately be incomplete while the user is editing.
 if (import.meta.env?.DEV) {
   useFlowStore.subscribe((state, prev) => {
     const nodes = selectCurrentFlow(state).nodes;
     if (nodes === selectCurrentFlow(prev)?.nodes) return;
-    const result = validateTree(registry, nodes, { rootType: ROOT_TYPE });
+    const result = validateTree(registry, nodes, { rootType: ROOT_TYPE, checkData: false });
     if (!result.success) console.error(`Flow tree invariant broken\n${z.prettifyError(result.error)}`);
   });
 }

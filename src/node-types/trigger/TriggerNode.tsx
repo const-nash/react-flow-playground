@@ -1,30 +1,23 @@
 import type { NodeComponentProps } from '../../core';
 import { fieldClass } from '../../shared/ui/field';
-import { NodeCard, SaveCancel } from '../../shared/ui/NodeCard';
-import { useDraft } from '../../shared/ui/useDraft';
+import { FieldError, NodeCard } from '../../shared/ui/NodeCard';
 import { TRIGGER_TYPE_LABELS, TRIGGER_TYPES, USER_ACTION_LABELS, USER_ACTIONS, type TriggerType, type UserAction } from './options';
-import { triggerSchema, type TriggerData, type TriggerDraft } from './schema';
+import type { TriggerDraft } from './schema';
 
 const ACCENT = { border: 'border-violet-400', header: 'text-violet-600' };
 
-const sameTrigger = (a: TriggerDraft, b: TriggerDraft) => a.triggerType === b.triggerType && a.action === b.action;
-
-export function TriggerNode({ data, onSave, ...card }: NodeComponentProps<TriggerData>) {
-  const { draft, setDraft, dirty, reset, error, value } = useDraft<TriggerDraft, TriggerData>(
-    data,
-    triggerSchema,
-    sameTrigger,
-  );
+export function TriggerNode({ data, errors, onChange, ...card }: NodeComponentProps<TriggerDraft>) {
+  const actionError = errors.action;
 
   return (
-    <NodeCard title="Trigger" accent={ACCENT} {...card}>
+    <NodeCard title="Trigger" accent={ACCENT} invalid={Object.keys(errors).length > 0} {...card}>
       <label className="flex flex-col gap-1 text-xs text-slate-500">
         Trigger type
         <select
           className={`${fieldClass} cursor-pointer`}
-          value={draft.triggerType ?? ''}
+          value={data.triggerType ?? ''}
           // Switching the trigger type invalidates the dependent action.
-          onChange={(e) => setDraft({ triggerType: (e.target.value || null) as TriggerType | null, action: null })}
+          onChange={(e) => onChange({ triggerType: (e.target.value || null) as TriggerType | null, action: null })}
         >
           <option value="">Select…</option>
           {TRIGGER_TYPES.map((t) => (
@@ -34,13 +27,14 @@ export function TriggerNode({ data, onSave, ...card }: NodeComponentProps<Trigge
           ))}
         </select>
       </label>
-      {draft.triggerType === 'user_action' && (
+      {data.triggerType === 'user_action' && (
         <label className="flex flex-col gap-1 text-xs text-slate-500">
           Action
           <select
-            className={`${fieldClass} cursor-pointer ${dirty && error ? '!border-red-400' : ''}`}
-            value={draft.action ?? ''}
-            onChange={(e) => setDraft({ ...draft, action: (e.target.value || null) as UserAction | null })}
+            className={`${fieldClass} cursor-pointer ${actionError ? '!border-red-400' : ''}`}
+            value={data.action ?? ''}
+            onChange={(e) => onChange({ ...data, action: (e.target.value || null) as UserAction | null })}
+            aria-invalid={Boolean(actionError)}
           >
             <option value="">Select…</option>
             {USER_ACTIONS.map((a) => (
@@ -49,9 +43,9 @@ export function TriggerNode({ data, onSave, ...card }: NodeComponentProps<Trigge
               </option>
             ))}
           </select>
+          <FieldError message={actionError} />
         </label>
       )}
-      <SaveCancel dirty={dirty} error={error} onSave={() => value && onSave(value)} onCancel={reset} />
     </NodeCard>
   );
 }

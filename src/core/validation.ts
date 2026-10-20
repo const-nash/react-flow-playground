@@ -14,7 +14,13 @@ const treeNodeShape = z.object({
  * Schema for a whole tree (e.g. loaded from storage or a backend):
  * node shape, per-type `data` and every structural rule from the registry.
  */
-export function treeSchema(registry: NodeRegistry, options: { rootType?: string } = {}) {
+export interface TreeValidationOptions {
+  rootType?: string;
+  /** Check every node's `data` against its type schema. Off = structure only. Defaults to true. */
+  checkData?: boolean;
+}
+
+export function treeSchema(registry: NodeRegistry, options: TreeValidationOptions = {}) {
   return z.array(treeNodeShape).superRefine((nodes, ctx) => {
     const issue = (message: string, path: PropertyKey[]) => ctx.addIssue({ code: 'custom', message, path });
     const byId = new Map<string, TreeNode>();
@@ -40,8 +46,8 @@ export function treeSchema(registry: NodeRegistry, options: { rootType?: string 
         return issue(`Unknown node type "${n.type}"`, [i, 'type']);
       }
 
-      const data = def.schema.safeParse(n.data);
-      if (!data.success) {
+      const data = options.checkData === false ? undefined : def.schema.safeParse(n.data);
+      if (data && !data.success) {
         for (const e of data.error.issues) issue(e.message, [i, 'data', ...e.path]);
       }
 
@@ -98,6 +104,16 @@ export function treeSchema(registry: NodeRegistry, options: { rootType?: string 
   });
 }
 
-export function validateTree(registry: NodeRegistry, input: unknown, options?: { rootType?: string }) {
+export function validateTree(registry: NodeRegistry, input: unknown, options?: TreeValidationOptions) {
   return treeSchema(registry, options).safeParse(input);
+}
+
+/** First message per field path, for showing errors next to inputs. */
+export function fieldErrors(schema: z.ZodType, value: unknown): Record<string, string> {
+  const result = schema.safeParse(value);
+  const errors: Record<string, string> = {};
+  if (!result.success) {
+    for (const issue of result.error.issues) errors[issue.path.join('.')] ??= issue.message;
+  }
+  return errors;
 }

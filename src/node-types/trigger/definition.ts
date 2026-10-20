@@ -1,8 +1,8 @@
 import { defineNodeType } from '../../core';
-import { triggerSchema, type TriggerData } from './schema';
+import { triggerSchema, type TriggerDraft } from './schema';
 import { TriggerNode } from './TriggerNode';
 
-export const triggerNode = defineNodeType<TriggerData>({
+export const triggerNode = defineNodeType<TriggerDraft>({
   type: 'trigger',
   label: 'Trigger',
   // Entry point: only ever the root, never offered in the "+" menu.

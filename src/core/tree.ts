@@ -89,5 +89,5 @@ export function removeSubtree(registry: NodeRegistry, nodes: TreeNode[], id: str
 }
 
 export function updateData(nodes: TreeNode[], id: string, data: unknown): TreeNode[] {
-  return nodes.map((n) => (n.id === id ? { ...n, data } : n));
+  return nodes.some((n) => n.id === id) ? nodes.map((n) => (n.id === id ? { ...n, data } : n)) : nodes;
 }

@@ -20,24 +20,34 @@ export interface ChildRules {
   defaultChild?: string;
 }
 
+/** Validation messages keyed by field path (`'action'`, `'a.b'`; `''` for the value itself). */
+export type FieldErrors = Record<string, string>;
+
 /** What a node type's component receives. Plugins know nothing about React Flow or the store. */
 export interface NodeComponentProps<Data> {
   data: Data;
+  /** Problems that would block saving the flow; shown inline, never block editing. */
+  errors: FieldErrors;
   isRoot: boolean;
   width: number;
   height: number;
-  onSave: (data: Data) => void;
+  /** Writes straight to the working copy in the store. */
+  onChange: (data: Data) => void;
   /** Absent for nodes that cannot be deleted (the root). */
   onDelete?: () => void;
 }
 
+/**
+ * `Data` is the editable shape kept in state while the user works — it may be incomplete.
+ * `schema` decides whether it is good enough to be saved to the database.
+ */
 export interface NodeTypeDefinition<Data = any> {
   type: string;
   label: string;
   /** `entry` types can only be the root; `step` types can be added via "+". */
   role: 'entry' | 'step';
   size: { width: number; height: number };
-  /** Validates `data` at every boundary: defaults, saves and whole-tree checks. */
+  /** Rules `data` must satisfy for the flow to be saved. Defaults must pass it too. */
   schema: z.ZodType<Data>;
   defaultData: () => Data;
   children: ChildRules;
